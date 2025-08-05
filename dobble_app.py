@@ -1,17 +1,12 @@
 import tkinter as tk
 import math
+import random
+import string
 
-def create_circle_with_numbers(canvas, center_x, center_y, radius, numbers):
+def create_circle_with_symbols(canvas, center_x, center_y, radius, symbols):
     """
-    Рисует круг на холсте и размещает в нем числа из списка,
-    распределяя их равномерно по окружности.
-
-    Args:
-        canvas (tk.Canvas): Виджет холста для рисования.
-        center_x (int): Координата X центра круга.
-        center_y (int): Координата Y центра круга.
-        radius (int): Радиус круга.
-        numbers (list): Список чисел для отображения в круге.
+    Рисует круг на холсте и размещает в нем символы,
+    распределяя их равномерно по окружности с разными размерами шрифта.
     """
     # Рисуем контур круга
     canvas.create_oval(
@@ -20,57 +15,88 @@ def create_circle_with_numbers(canvas, center_x, center_y, radius, numbers):
         outline="black", width=2
     )
 
-    # Рассчитываем позиции и рисуем числа
-    num_count = len(numbers)
-    # Размещаем числа на воображаемом круге меньшего радиуса
-    text_radius = radius * 0.7
-    # "Большие" цифры - размер шрифта зависит от радиуса
-    font_size = int(radius / 3)
-    font = ("Arial", font_size, "bold")
-
-    # Распределяем числа равномерно, начиная сверху (угол -90 градусов)
+    # Рассчитываем позиции и рисуем символы
+    num_count = len(symbols)
+    text_radius = radius * 0.75  # Размещаем символы ближе к краю
+    
+    # Распределяем символы равномерно, начиная сверху (угол -90 градусов)
     angle_increment = 360 / num_count
     start_angle = -90
 
-    for i, number in enumerate(numbers):
+    for i, symbol in enumerate(symbols):
         angle = math.radians(start_angle + i * angle_increment)
         x = center_x + text_radius * math.cos(angle)
         y = center_y + text_radius * math.sin(angle)
-        canvas.create_text(x, y, text=str(number), font=font)
+        
+        # Разный размер шрифта для каждого символа (от 16 до 22)
+        font_size = random.randint(16, 22)
+        font = ("Arial", font_size, "bold")
+        
+        # Ресуем символы
+        canvas.create_text(x, y, text=symbol, font=font)
 
+def generate_random_symbols(count, common_symbol):
+    """Генерирует список случайных букв с заданным общим символом"""
+    symbols = set()
+    
+    # Добавляем уникальные буквы, пока не достигнем нужного количества
+    while len(symbols) < count - 1:
+        symbol = random.choice(string.ascii_uppercase)
+        if symbol != common_symbol and symbol not in used_symbols:
+            symbols.add(symbol)
+            used_symbols.add(symbol)
+    
+    result = list(symbols)
+    result.append(common_symbol)
+    random.shuffle(result)
+    return result
 
 # --- Основная часть программы ---
 
-# Создаем главное окно приложения
 root = tk.Tk()
-# 0. Заголовок Dobble
-root.title("Dobble")
+root.title("Dobble с символами")
 
-# Создаем виджет Canvas для рисования
-canvas_width = 600
-canvas_height = 300
+canvas_width = 900  # Увеличили ширину холста
+canvas_height = 500
 canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="white")
-canvas.pack()
+canvas.pack(pady=20)
 
-# Задаем параметры для кругов
-circle_radius = 100
+# Параметры кругов
+circle_radius = 160
 circle_y = canvas_height / 2
 
-# 1. Два круга, один слева, другой справа
+# Позиции кругов (увеличили расстояние между центрами)
 left_circle_center_x = canvas_width / 4
 right_circle_center_x = (canvas_width / 4) * 3
 
-# 2. В левом круге цифры 1, 2, 3, 4
-left_numbers = [1, 2, 3, 4]
-create_circle_with_numbers(
-    canvas, left_circle_center_x, circle_y, circle_radius, left_numbers
+# Глобальная переменная для общего символа
+common_symbol = random.choice(string.ascii_uppercase)
+used_symbols = {common_symbol}  # Множество для отслеживания использованных символов
+
+# Генерируем случайные символы с одним общим
+symbols_per_circle = 8
+left_symbols = generate_random_symbols(symbols_per_circle, common_symbol)
+right_symbols = generate_random_symbols(symbols_per_circle, common_symbol)
+
+# Создаем круги с символами
+create_circle_with_symbols(
+    canvas, left_circle_center_x, circle_y, circle_radius, left_symbols
 )
 
-# 3. В правом круге цифры 4, 5, 6, 7
-right_numbers = [4, 5, 6, 7]
-create_circle_with_numbers(
-    canvas, right_circle_center_x, circle_y, circle_radius, right_numbers
+create_circle_with_symbols(
+    canvas, right_circle_center_x, circle_y, circle_radius, right_symbols
 )
 
-# Запускаем главный цикл обработки событий
+# Добавляем подсказку
+canvas.create_text(
+    canvas_width/2, 30,
+    text=f"Найдите общий символ!",
+    font=("Arial", 18, "bold"),
+    fill="blue"
+)
+
+# Проверка, что совпадение только одно (для отладки)
+intersection = set(left_symbols) & set(right_symbols)
+print(f"Общий символ: {common_symbol}, совпадений: {intersection}")
+
 root.mainloop()
