@@ -62,6 +62,7 @@ class DobbleGame:
         self.score_label.pack()
         self.timer_label = tk.Label(root, text=f"Время: {self.time_left}", font=("Arial", 14))
         self.timer_label.pack()
+        self.game_over = False  # Флаг завершения игры
         self.draw_circles()
         self.bind_numbers()
         self.update_timer()
@@ -78,6 +79,8 @@ class DobbleGame:
             self.canvas.tag_bind(f"right_{number}", "<Button-1>", lambda e, n=number: self.on_number_click(n))
 
     def on_number_click(self, number):
+        if self.game_over:
+            return
         if number in self.common:
             self.score += 10
             self.score_label.config(text=f"Очки: {self.score}")
@@ -94,7 +97,11 @@ class DobbleGame:
             self.end_game()
 
     def end_game(self, wrong=False):
-        self.canvas.unbind("<Button-1>")
+        self.game_over = True
+        # Отключаем обработчики на всех цифрах
+        for number in set(self.left_numbers + self.right_numbers):
+            self.canvas.tag_unbind(f"left_{number}", "<Button-1>")
+            self.canvas.tag_unbind(f"right_{number}", "<Button-1>")
         if self.timer_id:
             self.root.after_cancel(self.timer_id)
         if wrong:
