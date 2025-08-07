@@ -39,38 +39,81 @@ def create_circle_with_numbers(canvas, center_x, center_y, radius, numbers):
         canvas.create_text(x, y, text=str(number), font=font)
 
 
+
 # --- Основная часть программы ---
+
+def start_game():
+    start_frame.pack_forget()
+    game_frame.pack(fill="both", expand=True)
+    draw_game()
+
+def draw_game():
+    canvas_width = canvas.winfo_width()
+    canvas_height = canvas.winfo_height()
+    canvas.delete("all")
+    # Радиус круга зависит от размера окна
+    circle_radius = min(canvas_width, canvas_height) // 4
+    circle_y = canvas_height / 2
+    left_circle_center_x = canvas_width / 4
+    right_circle_center_x = (canvas_width / 4) * 3
+    left_numbers = [1, 2, 3, 4]
+    right_numbers = [4, 5, 6, 7]
+    create_circle_with_numbers(
+        canvas, left_circle_center_x, circle_y, circle_radius, left_numbers
+    )
+    create_circle_with_numbers(
+        canvas, right_circle_center_x, circle_y, circle_radius, right_numbers
+    )
+
 
 # Создаем главное окно приложения
 root = tk.Tk()
-# 0. Заголовок Dobble
 root.title("Dobble")
 
-# Создаем виджет Canvas для рисования
-canvas_width = 600
-canvas_height = 300
-canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="white")
-canvas.pack()
+# Минимальные размеры окна (пропорции минимума окна задаются здесь)
+MIN_WIDTH = 600   # минимальная ширина окна
+MIN_HEIGHT = 500  # минимальная высота окна
+root.minsize(MIN_WIDTH, MIN_HEIGHT)
 
-# Задаем параметры для кругов
-circle_radius = 100
-circle_y = canvas_height / 2
 
-# 1. Два круга, один слева, другой справа
-left_circle_center_x = canvas_width / 4
-right_circle_center_x = (canvas_width / 4) * 3
+# Стартовый экран
+start_frame = tk.Frame(root, bg="#adb085")
+start_frame.pack(fill="both", expand=True)
 
-# 2. В левом круге цифры 1, 2, 3, 4
-left_numbers = [1, 2, 3, 4]
-create_circle_with_numbers(
-    canvas, left_circle_center_x, circle_y, circle_radius, left_numbers
-)
+# Функция для центрирования элементов выше середины окна
+def place_start_widgets():
+    start_frame.update_idletasks()
+    frame_height = start_frame.winfo_height()
+    frame_width = start_frame.winfo_width()
+    btn_height = 60  # Примерная высота кнопки Play в пикселях
+    offset = frame_height // 2 - btn_height * 2
+    if offset < 0:
+        offset = 20
+    title_label.place(relx=0.5, y=offset, anchor="s")
+    play_button.place(relx=0.5, y=offset + btn_height + 10, anchor="n")
 
-# 3. В правом круге цифры 4, 5, 6, 7
-right_numbers = [4, 5, 6, 7]
-create_circle_with_numbers(
-    canvas, right_circle_center_x, circle_y, circle_radius, right_numbers
-)
+title_label = tk.Label(start_frame, text="Dobble", font=("Arial", 32, "bold"), bg="#adb085")
+play_button = tk.Button(start_frame, text="Play", font=("Arial", 20), width=15, height=1, command=start_game)
+
+# Размещаем элементы после изменения размера окна
+def on_start_resize(event):
+    place_start_widgets()
+start_frame.bind("<Configure>", on_start_resize)
+
+# Первоначальное размещение
+place_start_widgets()
+
+
+# Игровой экран (изначально скрыт)
+game_frame = tk.Frame(root)
+canvas = tk.Canvas(game_frame, bg="#adb085")
+canvas.pack(fill="both", expand=True)
+
+# Перерисовывать игру при изменении размера окна
+def on_resize(event):
+    if game_frame.winfo_ismapped():
+        draw_game()
+canvas.bind("<Configure>", on_resize)
 
 # Запускаем главный цикл обработки событий
 root.mainloop()
