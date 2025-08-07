@@ -2,135 +2,176 @@ import tkinter as tk
 import math
 import random
 import string
+from tkinter.font import Font
 
-def create_circle_with_symbols(canvas, center_x, center_y, radius, symbols, common_symbol, tag=None):
-    """
-    Рисует круг на холсте и размещает в нем символы,
-    распределяя их равномерно по окружности с разными размерами шрифта.
-    """
-    # Рисуем контур круга
-    canvas.create_oval(
-        center_x - radius, center_y - radius,
-        center_x + radius, center_y + radius,
-        outline="black", width=2, tags=tag
-    )
-
-    # Рассчитываем позиции и рисуем символы
-    num_count = len(symbols)
-    text_radius = radius * 0.75  # Размещаем символы ближе к краю
-    
-    # Распределяем символы равномерно, начиная сверху (угол -90 градусов)
-    angle_increment = 360 / num_count
-    start_angle = -90
-
-    for i, symbol in enumerate(symbols):
-        angle = math.radians(start_angle + i * angle_increment)
-        x = center_x + text_radius * math.cos(angle)
-        y = center_y + text_radius * math.sin(angle)
+class DobbleGame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Dobble Game")
         
-        # Разный размер шрифта для каждого символа (от 16 до 22)
-        font_size = random.randint(16, 22)
-        font = ("Arial", font_size, "bold")
+        # Настройки игры
+        self.symbols_per_card = 8
+        self.card_radius = 180  # Увеличил радиус круга
+        self.min_distance = 45  # Увеличил минимальное расстояние между символами
+        self.canvas_width = 1000
+        self.canvas_height = 600
         
-        # Рисуем символы, выделяем общий символ красным
-        if symbol == common_symbol:
-            canvas.create_text(x, y, text=symbol, font=font, fill="red", tags=f"{tag}_symbol_{i}" if tag else None)
-        else:
-            canvas.create_text(x, y, text=symbol, font=font, tags=f"{tag}_symbol_{i}" if tag else None)
+        # Создаем холст
+        self.canvas = tk.Canvas(root, width=self.canvas_width, height=self.canvas_height, bg="white")
+        self.canvas.pack(pady=20)
+        
+        # Позиции карточек
+        self.left_card_center = (self.canvas_width // 4, self.canvas_height // 2)
+        self.right_card_center = (3 * self.canvas_width // 4, self.canvas_height // 2)
+        
+        # Шрифты
+        self.font_sizes = [20, 22, 24, 26]  # Увеличил размеры шрифтов
+        self.fonts = [Font(family="Arial", size=s, weight="bold") for s in self.font_sizes]
+        
+        # Инициализация игры
+        self.common_symbol = None
+        self.used_symbols = set()
+        self.left_card_symbols = []
+        self.right_card_symbols = []
+        
+        # Создаем новую игру
+        self.new_game()
+        
+        # Привязываем обработчик кликов
+        self.canvas.bind("<Button-1>", self.handle_click)
 
-def generate_random_symbols(count, common_symbol, used_symbols):
-    """Генерирует список случайных букв с заданным общим символом"""
-    symbols = set()
-    
-    # Добавляем уникальные буквы, пока не достигнем нужного количества
-    while len(symbols) < count - 1:
-        symbol = random.choice(string.ascii_uppercase)
-        if symbol != common_symbol and symbol not in used_symbols:
-            symbols.add(symbol)
-            used_symbols.add(symbol)
-    
-    result = list(symbols)
-    result.append(common_symbol)
-    random.shuffle(result)
-    return result
+    def new_game(self):
+        """Инициализирует новую игру с новыми карточками"""
+        self.canvas.delete("all")
+        self.used_symbols = set()
+        
+        # Генерируем общий символ
+        self.common_symbol = random.choice(string.ascii_uppercase)
+        self.used_symbols.add(self.common_symbol)
+        
+        # Создаем левую карточку
+        self.left_card_symbols = self.generate_card_symbols(self.common_symbol)
+        self.draw_card(self.left_card_center, self.left_card_symbols, "left")
+        
+        # Создаем правую карточку
+        self.right_card_symbols = self.generate_card_symbols(self.common_symbol)
+        self.draw_card(self.right_card_center, self.right_card_symbols, "right")
+        
+        # Рисуем инструкцию
+        self.draw_instructions()
 
-def restart_game():
-    """Перезапускает игру с новыми карточками"""
-    global common_symbol, used_symbols, left_symbols, right_symbols
-    
-    # Очищаем холст
-    canvas.delete("all")
-    
-    # Генерируем новый общий символ
-    common_symbol = random.choice(string.ascii_uppercase)
-    used_symbols = {common_symbol}
-    
-    # Создаем новые карточки
-    left_symbols = generate_random_symbols(symbols_per_circle, common_symbol, used_symbols)
-    right_symbols = generate_random_symbols(symbols_per_circle, common_symbol, used_symbols)
-    
-    # Рисуем карточки
-    create_circle_with_symbols(
-        canvas, left_circle_center_x, circle_y, circle_radius, 
-        left_symbols, common_symbol, "left_card"
-    )
-    create_circle_with_symbols(
-        canvas, right_circle_center_x, circle_y, circle_radius, 
-        right_symbols, common_symbol, "right_card"
-    )
-    
-    # Добавляем подсказку
-    canvas.create_text(
-        canvas_width/2, 30,
-        text="Найдите общий символ (красный) в ЛЕВОЙ карточке и кликните по нему!",
-        font=("Arial", 16, "bold"),
-        fill="blue"
-    )
+    def generate_card_symbols(self, common_symbol):
+        """Генерирует символы для карточки с заданным общим символом"""
+        symbols = set()
+        
+        # Добавляем уникальные символы
+        while len(symbols) < self.symbols_per_card - 1:
+            symbol = random.choice(string.ascii_uppercase)
+            if symbol != common_symbol and symbol not in self.used_symbols:
+                symbols.add(symbol)
+                self.used_symbols.add(symbol)
+        
+        result = list(symbols)
+        result.append(common_symbol)
+        random.shuffle(result)
+        return result
 
-def on_click(event):
-    """Обработчик клика мыши"""
-    # Находим объекты под курсором
-    items = canvas.find_overlapping(event.x-1, event.y-1, event.x+1, event.y+1)
-    
-    for item in items:
-        tags = canvas.gettags(item)
-        # Проверяем, кликнули ли на символ в левой карточке
-        if any(tag.startswith("left_card_symbol_") for tag in tags):
-            symbol = canvas.itemcget(item, "text")
-            # Если кликнули на общий символ (красный)
-            if symbol == common_symbol:
-                restart_game()
-                break
+    def is_valid_position(self, center, radius, new_pos, existing_positions, font_size):
+        """Проверяет, что новая позиция допустима"""
+        x, y = center
+        new_x, new_y = new_pos
+        
+        # Проверка, что символ внутри круга (с учетом размера шрифта)
+        distance_to_center = math.sqrt((new_x - x)**2 + (new_y - y)**2)
+        max_distance = radius - font_size  # Учитываем размер шрифта
+        if distance_to_center > max_distance:
+            return False
+        
+        # Проверка на пересечение с другими символами (увеличил минимальное расстояние)
+        for (ex_x, ex_y, ex_size) in existing_positions:
+            distance = math.sqrt((new_x - ex_x)**2 + (new_y - ex_y)**2)
+            min_required = (font_size + ex_size) / 2 + 15  # Увеличил дополнительное расстояние
+            if distance < min_required:
+                return False
+                
+        return True
 
-# --- Основная часть программы ---
+    def draw_card(self, center, symbols, tag):
+        """Рисует карточку со случайно расположенными символами"""
+        x, y = center
+        radius = self.card_radius
+        
+        # Рисуем круг карточки
+        self.canvas.create_oval(
+            x - radius, y - radius,
+            x + radius, y + radius,
+            outline="black", width=3, tags=tag
+        )
+        
+        existing_positions = []
+        max_attempts = 200  # Увеличил количество попыток
+        
+        for i, symbol in enumerate(symbols):
+            font = random.choice(self.fonts)
+            font_size = int(font['size'])
+            
+            # Пытаемся найти подходящую позицию
+            for attempt in range(max_attempts):
+                # Генерируем случайный угол и расстояние от центра
+                angle = random.uniform(0, 2 * math.pi)
+                # Ограничиваем максимальное расстояние с учетом размера шрифта
+                max_dist = radius - font_size - 10
+                distance = random.uniform(radius * 0.3, max_dist)  # Не слишком близко к центру
+                
+                text_x = x + distance * math.cos(angle)
+                text_y = y + distance * math.sin(angle)
+                
+                if self.is_valid_position(center, radius, (text_x, text_y), existing_positions, font_size):
+                    existing_positions.append((text_x, text_y, font_size))
+                    self.canvas.create_text(
+                        text_x, text_y,
+                        text=symbol,
+                        font=font,
+                        tags=f"{tag}_symbol_{i}"
+                    )
+                    break
+            else:
+                # Если не нашли позицию после всех попыток, размещаем ближе к краю
+                angle = random.uniform(0, 2 * math.pi)
+                distance = radius - font_size - 5
+                text_x = x + distance * math.cos(angle)
+                text_y = y + distance * math.sin(angle)
+                existing_positions.append((text_x, text_y, font_size))
+                self.canvas.create_text(
+                    text_x, text_y,
+                    text=symbol,
+                    font=font,
+                    tags=f"{tag}_symbol_{i}"
+                )
 
-root = tk.Tk()
-root.title("Dobble с символами")
+    def draw_instructions(self):
+        """Рисует инструкцию для игрока"""
+        self.canvas.create_text(
+            self.canvas_width // 2, 30,
+            text="Найдите и кликните на общий символ в ЛЕВОЙ карточке",
+            font=("Arial", 16, "bold"),
+            fill="blue"
+        )
 
-canvas_width = 900
-canvas_height = 500
-canvas = tk.Canvas(root, width=canvas_width, height=canvas_height, bg="white")
-canvas.pack(pady=20)
+    def handle_click(self, event):
+        """Обрабатывает клики игрока"""
+        clicked_items = self.canvas.find_overlapping(event.x-5, event.y-5, event.x+5, event.y+5)
+        
+        for item in clicked_items:
+            tags = self.canvas.gettags(item)
+            if "left_symbol" in " ".join(tags):
+                symbol = self.canvas.itemcget(item, "text")
+                if symbol == self.common_symbol:
+                    self.new_game()
+                    break
 
-# Привязываем обработчик кликов
-canvas.bind("<Button-1>", on_click)
-
-# Параметры кругов
-circle_radius = 160
-circle_y = canvas_height / 2
-
-# Позиции кругов
-left_circle_center_x = canvas_width / 4
-right_circle_center_x = (canvas_width / 4) * 3
-
-# Настройки игры
-symbols_per_circle = 8
-common_symbol = None
-used_symbols = set()
-left_symbols = []
-right_symbols = []
-
-# Запускаем первую игру
-restart_game()
-
-root.mainloop()
+# Запуск игры
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = DobbleGame(root)
+    root.mainloop()
